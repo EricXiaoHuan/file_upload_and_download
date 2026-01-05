@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .btn {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        .file-link {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        .file-link:hover {
+            text-decoration: underline;
+        }
+        .upload-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-group input[type="file"] {
+            display: none;
+        }
+        .custom-file-upload {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+        .custom-file-upload:hover {
+            border-color: #4CAF50;
+        }
+        .file-select-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .file-select-btn:hover {
+            background-color: #45a049;
+        }
+        .file-name-display {
+            flex: 1;
+            margin: 0 10px;
+            color: #666;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .form-group input[type="submit"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .header-buttons {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-buttons">
+        <button type="button" class="btn btn-secondary" onclick="location.href='{{ url_for('index') }}'">
+            Back to File List
+        </button>
+    </div>
+    
+    <div class="upload-container">
+        <h1>Upload a File</h1>
+        <form method="post" enctype="multipart/form-data">
+            {{ form.csrf_token }}
+            <div class="form-group">
+                {{ form.file.label }}
+                <label for="{{ form.file.id }}" class="custom-file-upload">
+                    <span class="file-select-btn">选择文件</span>
+                    <span class="file-name-display">未选择文件</span>
+                </label>
+                {{ form.file() }}
+            </div>
+            <script>
+                // 处理文件选择事件，显示选中的文件名
+                document.getElementById('{{ form.file.id }}').addEventListener('change', function(e) {
+                    const fileNameDisplay = document.querySelector('.file-name-display');
+                    if (e.target.files.length > 0) {
+                        fileNameDisplay.textContent = e.target.files[0].name;
+                    } else {
+                        fileNameDisplay.textContent = '未选择文件';
+                    }
+                });
+            </script>
+            <div class="form-group">
+                <input type="submit" value="Upload" class="btn">
+            </div>
+        </form>
+    </div>
+</body>
+</html>

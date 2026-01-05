@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File Share Service</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .btn {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .file-link {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        .file-link:hover {
+            text-decoration: underline;
+        }
+        th {
+            cursor: pointer;
+            user-select: none;
+        }
+        th:hover {
+            background-color: #e0e0e0;
+        }
+        .sort-arrow {
+            margin-left: 5px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        .sort-asc::after {
+            content: '↑';
+        }
+        .sort-desc::after {
+            content: '↓';
+        }
+    </style>
+</head>
+<body>
+    <button type="button" class="btn" onclick="location.href='{{ url_for('upload') }}'">
+        Upload File
+    </button>
+    <h1>Available Files:</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Filename</th>
+                <th>Size</th>
+                <th>Created Date</th>
+                <th>Modified Date</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for file in files %}
+                <tr>
+                    <td>{{ file.name }}</td>
+                    <td>{{ file.size | filesizeformat }}</td>
+                    <td>{{ file.created | datetimeformat('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>{{ file.modified | datetimeformat('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td><a href="{{ url_for('download', filename=file.name) }}" class="file-link">Download</a></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        // 排序状态管理
+        let currentSortColumn = -1;
+        let currentSortDirection = 'asc';
+
+        // 表头点击事件
+        document.querySelectorAll('th').forEach((header, index) => {
+            header.addEventListener('click', () => {
+                sortTable(index);
+            });
+        });
+
+        function sortTable(columnIndex) {
+            const table = document.querySelector('table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const dataType = getColumnDataType(columnIndex);
+
+            // 确定排序方向
+            if (currentSortColumn === columnIndex) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = columnIndex;
+                currentSortDirection = 'asc';
+            }
+
+            // 排序行
+            rows.sort((rowA, rowB) => {
+                const cellA = rowA.querySelectorAll('td')[columnIndex].textContent;
+                const cellB = rowB.querySelectorAll('td')[columnIndex].textContent;
+
+                let valueA, valueB;
+
+                switch (dataType) {
+                    case 'number':
+                        valueA = parseFloat(cellA.split(' ')[0]);
+                        valueB = parseFloat(cellB.split(' ')[0]);
+                        break;
+                    case 'date':
+                        valueA = new Date(cellA);
+                        valueB = new Date(cellB);
+                        break;
+                    default:
+                        valueA = cellA.toLowerCase();
+                        valueB = cellB.toLowerCase();
+                }
+
+                if (valueA < valueB) {
+                    return currentSortDirection === 'asc' ? -1 : 1;
+                }
+                if (valueA > valueB) {
+                    return currentSortDirection === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+
+            // 重新排列行
+            rows.forEach(row => tbody.appendChild(row));
+
+            // 更新表头排序状态
+            updateSortIndicators(columnIndex);
+        }
+
+        function getColumnDataType(columnIndex) {
+            // 根据列索引确定数据类型
+            const typeMap = {
+                0: 'string',  // Filename
+                1: 'number',  // Size
+                2: 'date',    // Created Date
+                3: 'date',    // Modified Date
+                4: 'string'   // Action
+            };
+            return typeMap[columnIndex] || 'string';
+        }
+
+        function updateSortIndicators(activeColumn) {
+            // 移除所有表头的排序指示
+            document.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+
+            // 为当前排序列添加排序指示
+            const currentHeader = document.querySelectorAll('th')[activeColumn];
+            currentHeader.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    </script>
+</body>
+</html>
