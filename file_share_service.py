@@ -10,10 +10,15 @@ import socket
 import datetime
 
 # Flask相关导入
-from flask import Flask, redirect, render_template, send_from_directory, url_for
+from flask import Flask, redirect, render_template, send_from_directory, url_for, request, jsonify
 from flask_wtf import FlaskForm
 from wtforms import FileField
 from werkzeug.utils import secure_filename
+
+# 导入编码转换功能
+import chardet
+import platform
+import subprocess
 
 # 文件存储目录配置
 FILE_STORAGE_DIR = r'D:\download'  # 文件上传下载的存储路径
@@ -90,6 +95,60 @@ class UploadFileForm(FlaskForm):
     使用Flask-WTF实现文件上传表单
     """
     file = FileField("File")  # 文件字段
+
+def set_writable(file_path):
+    """设置文件为可写状态"""
+    try:
+        if platform.system() == 'Windows':
+            subprocess.run(['attrib', file_path, '-r'], check=True)
+        else:
+            os.chmod(file_path, 0o666)
+    except Exception as e:
+        print(f"Failed to change permissions: {str(e)}")
+
+def is_gb2312(file_path):
+    """检测文件是否为GB2312编码"""
+    try:
+        with open(file_path, 'rb') as f:
+            content = f.read()
+            result = chardet.detect(content)
+            encoding = result['encoding']
+            confidence = result['confidence']
+            # 检测编码是否为GB2312或相关中文编码，且置信度较高
+            if encoding and confidence > 0.8:
+                if encoding.lower() in ['gb2312', 'gbk', 'hz-gb-2312', 'chinese']:
+                    return True
+    except Exception as e:
+        print(f"检测文件编码时出现错误: {str(e)}")
+    return False
+
+def check_and_set_writable(file_path):
+    """检查并设置文件为可写状态"""
+    if not os.access(file_path, os.W_OK):
+        print(f"{file_path} is not writable. Changing permissions...")
+        set_writable(file_path)
+        print(f"Permissions changed. Now {file_path} is writable.")
+
+def convert_gb2312_to_utf8(file_path):
+    """将文件从GB2312编码转换为UTF-8编码"""
+    try:
+        # 检查并设置文件为可写状态
+        check_and_set_writable(file_path)
+        
+        # 读取文件内容
+        with open(file_path, 'r', encoding='gb2312') as f:
+            content = f.read()
+
+        # 将内容转换为 UTF-8 编码
+        content_utf8 = content.encode('utf-8-sig')
+
+        # 写入文件（覆盖原文件）
+        with open(file_path, 'w', encoding='utf-8-sig') as f:
+            f.write(content_utf8.decode('utf-8-sig'))
+
+        return True, f"文件 {file_path} 编码已从 GB2312 转换为 utf-8-sig"
+    except Exception as e:
+        return False, f"转换文件 {file_path} 时出现错误：{str(e)}"
 
 def get_available_files():
     """
@@ -170,6 +229,45 @@ def index():
     available_files = get_available_files()
     # 返回首页页面，传递文件列表
     return render_template('index.html', files=available_files)
+
+@app.route('/encoding_converter')
+def encoding_converter():
+    """
+    编码转换页面路由
+    显示编码转换界面
+    
+    :return: 编码转换页面
+    """
+    return render_template('encoding_converter.html')
+
+@app.route('/convert_encoding', methods=['POST'])
+def convert_encoding():
+    """
+    执行编码转换的API路由
+    接收文件路径，执行GB2312到UTF-8的转换
+    
+    :return: JSON格式的转换结果
+    """
+    try:
+        file_path = request.form.get('file_path')
+        if not file_path:
+            return jsonify({'success': False, 'message': '未提供文件路径'})
+        
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            return jsonify({'success': False, 'message': f'文件不存在: {file_path}'})
+        
+        # 检查文件是否为GB2312编码
+        if not is_gb2312(file_path):
+            return jsonify({'success': False, 'message': f'文件不是GB2312编码: {file_path}'})
+        
+        # 执行编码转换
+        success, message = convert_gb2312_to_utf8(file_path)
+        
+        return jsonify({'success': success, 'message': message})
+    
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'转换过程中出现错误: {str(e)}'})
 
 # 检查文件存储目录是否存在，如果不存在则创建
 if not os.path.exists(FILE_STORAGE_DIR):
